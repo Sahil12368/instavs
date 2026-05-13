@@ -39,6 +39,14 @@ async function processIncomingComment(commentData) {
   try {
     const { id, text, from, media } = commentData;
 
+    // De-duplicate: if we've already seen this comment ID, skip it.
+    // This happens on Meta retries and webhook "Test" reruns.
+    const existing = await Message.findOne({ instagramMessageId: id });
+    if (existing) {
+      console.log(`↺ Comment ${id} already processed — skipping`);
+      return existing;
+    }
+
     // Find a matching rule
     const matchingRule = await findMatchingRule(text, 'comment');
 
@@ -77,6 +85,11 @@ async function processIncomingComment(commentData) {
     await message.save();
     return message;
   } catch (error) {
+    // Swallow the duplicate-key race so the webhook handler still returns 200
+    if (error?.code === 11000) {
+      console.log('↺ Duplicate comment detected during save — ignoring');
+      return null;
+    }
     console.error('Error processing incoming comment:', error.message);
     throw error;
   }
@@ -88,6 +101,13 @@ async function processIncomingComment(commentData) {
 async function processIncomingDM(dmData) {
   try {
     const { id, text, from } = dmData;
+
+    // De-duplicate retries
+    const existing = await Message.findOne({ instagramMessageId: id });
+    if (existing) {
+      console.log(`↺ DM ${id} already processed — skipping`);
+      return existing;
+    }
 
     // Find a matching rule
     const matchingRule = await findMatchingRule(text, 'dm');
@@ -127,6 +147,10 @@ async function processIncomingDM(dmData) {
     await message.save();
     return message;
   } catch (error) {
+    if (error?.code === 11000) {
+      console.log('↺ Duplicate DM detected during save — ignoring');
+      return null;
+    }
     console.error('Error processing incoming DM:', error.message);
     throw error;
   }
