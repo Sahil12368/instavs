@@ -179,12 +179,17 @@ async function getStoredAccount() {
  */
 async function subscribePageToWebhooks(pageId, pageAccessToken) {
   try {
+    // Meta's /subscribed_apps endpoint only accepts Page-level field names.
+    // Instagram-specific fields (comments, live_comments, etc.) are configured
+    // separately on the Meta dashboard under Webhooks -> Instagram object.
+    // Subscribing the Page with `feed,messages` is what actually triggers
+    // real-time delivery to our callback URL.
     const response = await axios.post(
       `${GRAPH_API_BASE}/${pageId}/subscribed_apps`,
       null,
       {
         params: {
-          subscribed_fields: 'feed,messages,comments,instagram',
+          subscribed_fields: 'feed,messages',
           access_token: pageAccessToken
         }
       }
