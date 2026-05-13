@@ -19,4 +19,7 @@ router.get('/instagram/status', authController.getConnectionStatus);
 // Disconnect Instagram account
 router.post('/instagram/disconnect', authController.disconnectAccount);
 
+// Manually (re)subscribe the connected page to webhooks
+router.post('/instagram/subscribe', authController.subscribeWebhooks);
+
 module.exports = router;

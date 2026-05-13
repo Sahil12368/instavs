@@ -66,7 +66,7 @@ async function getInstagramBusinessAccount(accessToken) {
     const pageAccessToken = page.access_token;
     const pageId = page.id;
 
-    // Now get the Instagram Business Account connected to this page
+    // Get the Instagram Business Account connected to this page
     const instagramResponse = await axios.get(`${GRAPH_API_BASE}/${pageId}`, {
       params: {
         fields: 'instagram_business_account',
@@ -87,6 +87,19 @@ async function getInstagramBusinessAccount(accessToken) {
         access_token: pageAccessToken
       }
     });
+
+    // Subscribe the page to webhooks so we actually receive comment/DM events.
+    // If this fails (e.g. missing permission) we log but still return the
+    // account — the user can retry via /api/auth/instagram/subscribe.
+    try {
+      await subscribePageToWebhooks(pageId, pageAccessToken);
+    } catch (subErr) {
+      console.warn(
+        '⚠️  Webhook subscription failed; events may not be delivered until ' +
+          'you hit /api/auth/instagram/subscribe:',
+        subErr.message
+      );
+    }
 
     return {
       instagramAccountId: igDetailsResponse.data.id,
@@ -157,10 +170,61 @@ async function getStoredAccount() {
   return await InstagramAccount.findOne({ isConnected: true });
 }
 
+/**
+ * Subscribe the Facebook Page (which owns the IG Business Account) to this
+ * app's webhook events. Without this call, real IG comments/DMs will never
+ * reach our webhook — only the dashboard "Test" button will work.
+ *
+ * Docs: https://developers.facebook.com/docs/graph-api/webhooks/getting-started
+ */
+async function subscribePageToWebhooks(pageId, pageAccessToken) {
+  try {
+    const response = await axios.post(
+      `${GRAPH_API_BASE}/${pageId}/subscribed_apps`,
+      null,
+      {
+        params: {
+          subscribed_fields: 'feed,messages,comments,instagram',
+          access_token: pageAccessToken
+        }
+      }
+    );
+    console.log('✅ Subscribed page to webhooks:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error(
+      'Error subscribing page to webhooks:',
+      error.response?.data || error.message
+    );
+    throw new Error('Failed to subscribe page to webhooks');
+  }
+}
+
+/**
+ * Return the stored account's pageId alongside its access token.
+ * We need pageId for the /subscribed_apps call.
+ */
+async function getPageForStoredAccount() {
+  const account = await getStoredAccount();
+  if (!account) throw new Error('No connected Instagram account');
+
+  // The stored accessToken is a page access token. Call /me to get the page id.
+  const res = await axios.get(`${GRAPH_API_BASE}/me`, {
+    params: { fields: 'id,name', access_token: account.accessToken }
+  });
+  return {
+    pageId: res.data.id,
+    pageName: res.data.name,
+    pageAccessToken: account.accessToken
+  };
+}
+
 module.exports = {
   exchangeForLongLivedToken,
   getInstagramBusinessAccount,
   replyToComment,
   sendDirectMessage,
-  getStoredAccount
+  getStoredAccount,
+  subscribePageToWebhooks,
+  getPageForStoredAccount
 };

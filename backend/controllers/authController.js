@@ -171,9 +171,36 @@ async function disconnectAccount(req, res) {
   }
 }
 
+/**
+ * Manually (re)subscribe the current Page to webhooks.
+ * Useful when OAuth completed but the initial auto-subscribe failed, or when
+ * debugging webhook delivery.
+ */
+async function subscribeWebhooks(req, res) {
+  try {
+    const { pageId, pageName, pageAccessToken } =
+      await instagramService.getPageForStoredAccount();
+    const result = await instagramService.subscribePageToWebhooks(
+      pageId,
+      pageAccessToken
+    );
+    return res.json({
+      message: `Page "${pageName}" subscribed to webhooks`,
+      pageId,
+      result
+    });
+  } catch (error) {
+    console.error('Error subscribing webhooks:', error);
+    return res
+      .status(500)
+      .json({ error: error.message || 'Failed to subscribe webhooks' });
+  }
+}
+
 module.exports = {
   initiateOAuth,
   handleOAuthCallback,
   getConnectionStatus,
-  disconnectAccount
+  disconnectAccount,
+  subscribeWebhooks
 };
