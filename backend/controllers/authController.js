@@ -15,15 +15,17 @@ function initiateOAuth(req, res) {
     const appId = process.env.META_APP_ID;
     const redirectUri = process.env.REDIRECT_URI;
 
-    // Define the permissions we need
+    // Define the permissions we need.
+    // Note: `pages_manage_metadata` and `business_management` require App Review
+    // and aren't available in Development mode — we've removed them. The
+    // webhook subscription is configured via the Meta dashboard, not at
+    // OAuth time, so we don't need those scopes for this MVP.
     const scopes = [
       'pages_show_list',
       'pages_read_engagement',
-      'pages_manage_metadata',
       'instagram_basic',
       'instagram_manage_comments',
-      'instagram_manage_messages',
-      'business_management'
+      'instagram_manage_messages'
     ].join(',');
 
     // Build the Meta OAuth URL
