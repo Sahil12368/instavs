@@ -63,14 +63,20 @@ async function handleOAuthCallback(req, res) {
       `https://graph.facebook.com/v18.0/oauth/access_token` +
       `?client_id=${process.env.META_APP_ID}` +
       `&client_secret=${process.env.META_APP_SECRET}` +
-      `&redirect_uri=${process.env.REDIRECT_URI}` +
+      `&redirect_uri=${encodeURIComponent(process.env.REDIRECT_URI)}` +
       `&code=${code}`
     );
     const tokenData = await tokenResponse.json();
 
     if (!tokenData.access_token) {
       console.error('Token exchange failed:', tokenData);
-      return res.status(400).json({ error: 'Failed to exchange code for token', details: tokenData });
+      const msg =
+        tokenData?.error?.message ||
+        tokenData?.error_message ||
+        'Failed to exchange code for token';
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/?connection=error&message=${encodeURIComponent(msg)}`
+      );
     }
 
     console.log('✅ Short-lived token obtained');
@@ -111,7 +117,10 @@ async function handleOAuthCallback(req, res) {
     return res.redirect(`${process.env.FRONTEND_URL}/?connection=success`);
   } catch (error) {
     console.error('OAuth callback error:', error);
-    return res.redirect(`${process.env.FRONTEND_URL}/?connection=error&message=${encodeURIComponent(error.message)}`);
+    const msg = error?.message || 'OAuth callback failed';
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/?connection=error&message=${encodeURIComponent(msg)}`
+    );
   }
 }
 

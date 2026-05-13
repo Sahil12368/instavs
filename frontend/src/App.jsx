@@ -15,13 +15,13 @@ function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const connection = params.get('connection');
-    const error = params.get('error');
+    const message = params.get('message') || params.get('error');
 
     if (connection === 'success') {
       // Clean the URL
       window.history.replaceState({}, document.title, '/');
     } else if (connection === 'error') {
-      alert('Failed to connect Instagram: ' + (error || 'Unknown error'));
+      alert('Failed to connect Instagram: ' + (message || 'Unknown error'));
       window.history.replaceState({}, document.title, '/');
     }
   }, []);
