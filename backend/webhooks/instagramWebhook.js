@@ -24,11 +24,25 @@ function verifySignature(req) {
   }
 
   const signature = req.header('x-hub-signature-256');
+
+  // Verbose debug so we can see exactly what Meta sent us
+  console.log('🔐 sig-debug', {
+    hasSignatureHeader: !!signature,
+    signatureHeader: signature,
+    hasRawBody: !!req.rawBody,
+    rawBodyLength: req.rawBody?.length,
+    appSecretLength: appSecret.length,
+    appSecretPreview:
+      appSecret.slice(0, 3) + '...' + appSecret.slice(-3)
+  });
+
   if (!signature || !req.rawBody) return false;
 
   const expected =
     'sha256=' +
     crypto.createHmac('sha256', appSecret).update(req.rawBody).digest('hex');
+
+  console.log('🔐 sig-compare', { received: signature, computed: expected });
 
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
