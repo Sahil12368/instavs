@@ -91,12 +91,14 @@ async function handleOAuthCallback(req, res) {
 
     console.log(`✅ Instagram account found: ${igAccount.username}`);
 
-    // Save or update the account in database
+    // Save or update the account in database.
+    // IMPORTANT: igAccount.accessToken is the PAGE access token, which is
+    // what all downstream Graph API calls (subscribe webhooks, reply to
+    // comments, send DMs) require — do NOT overwrite it with the user token.
     await InstagramAccount.findOneAndUpdate(
       { instagramAccountId: igAccount.instagramAccountId },
       {
         ...igAccount,
-        accessToken: tokenInfo.accessToken,
         tokenExpiresAt: tokenInfo.expiresAt,
         isConnected: true,
         lastSyncedAt: new Date()
