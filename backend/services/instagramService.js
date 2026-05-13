@@ -24,8 +24,16 @@ async function exchangeForLongLivedToken(shortLivedToken) {
 
     const { access_token, expires_in } = response.data;
 
-    // Calculate expiry date (expires_in is in seconds)
-    const expiresAt = new Date(Date.now() + expires_in * 1000);
+    // Some tokens (e.g. non-expiring page tokens) don't include expires_in.
+    // Use a 60-day default for long-lived tokens; leave null if Meta signals
+    // an explicit never-expires token.
+    let expiresAt = null;
+    if (typeof expires_in === 'number' && expires_in > 0) {
+      expiresAt = new Date(Date.now() + expires_in * 1000);
+    } else if (expires_in === undefined) {
+      // Fallback: default long-lived user tokens last 60 days
+      expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+    }
 
     return {
       accessToken: access_token,
